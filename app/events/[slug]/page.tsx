@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import BookEvent from "@/components/BookEvent";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
 const EventDetailItems = ({
@@ -16,6 +17,8 @@ const EventDetailItems = ({
     <p>{label}</p>
   </div>
 );
+
+const bookings = 10;
 
 const EventAgenda = ({ agendaItems }: { agendaItems: string[] }) => (
   <div className="agenda">
@@ -38,28 +41,44 @@ const EventTags = ({ tags }: { tags: string[] }) => (
   </div>
 );
 
+let event;
+
 const EventDetailsPage = async ({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) => {
   const { slug } = await params;
-  const response = await fetch(`${BASE_URL}/api/events/${slug}`);
+  try {
+    const request = await fetch(`${BASE_URL}/api/events/${slug}`, {
+      next: { revalidate: 60 },
+    });
+    if (!request.ok) {
+      if (request.status === 404) {
+        return notFound();
+      }
+      throw new Error(`Failed to fetch Event: ${request.statusText}`);
+    }
+    const response = await request.json();
+    event = response.event;
+  } catch (error) {
+    console.error("Error Fetching Event:", error);
+    return notFound();
+  }
+
   const {
-    event: {
-      description,
-      image,
-      overview,
-      date,
-      time,
-      location,
-      mode,
-      agenda,
-      audience,
-      tags,
-      organizer,
-    },
-  } = await response.json();
+    description,
+    image,
+    overview,
+    date,
+    time,
+    location,
+    mode,
+    agenda,
+    audience,
+    tags,
+    organizer,
+  } = event;
 
   if (!description) return notFound();
 
@@ -121,7 +140,17 @@ const EventDetailsPage = async ({
         </div>
         {/* Right Side - Booking Form */}
         <aside className="booking">
-          <p className="text-lg font-semibold">Book Event</p>
+          <div className="signup-card">
+            <h2>Book Your Spot</h2>
+            {bookings > 0 ? (
+              <p className="text-sm">
+                Join {bookings} people who have already booked their spot!
+              </p>
+            ) : (
+              <p className="text-sm">Be the first to book your spot!</p>
+            )}
+            <BookEvent />
+          </div>
         </aside>
       </div>
     </div>
