@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
-import Event, { IEvent } from "@/database/event.model";
+import Event from "@/database/event.model";
 
 interface RouteParams {
   slug: string;
@@ -12,15 +12,21 @@ interface RouteParams {
  * @param context The context object containing dynamic route parameters.
  * @returns A NextResponse object with the event data or an error message.
  */
+interface RouteContext {
+  params: Promise<RouteParams>;
+}
+
 export async function GET(
   req: NextRequest,
-  { params }: { params: RouteParams }
+  // Use the defined interface for the second argument
+  context: RouteContext
 ): Promise<NextResponse> {
   try {
+    // 3. Destructure and await the params object, which is needed by your environment
+    const { slug } = await context.params;
+
     // Establish database connection
     await connectDB();
-
-    const { slug } = await params;
 
     // Validate slug parameter
     if (!slug || typeof slug !== "string" || slug.trim().length === 0) {
@@ -32,6 +38,7 @@ export async function GET(
 
     const sanitizedSlug = slug.trim().toLowerCase();
 
+    // Assuming 'Event' is your Mongoose model
     const event = await Event.findOne({
       slug: sanitizedSlug,
     }).lean();
